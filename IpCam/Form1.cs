@@ -10,8 +10,6 @@ namespace IpCam
         {
             InitializeComponent();
             this.videostream = new MJPEGStream("http://192.168.15.100:8080/video");
-        
-            //this.videostream = new MJPEGStream("https://learn.microsoft.com/en-us/dotnet/api/system.net.webresponse.contenttype?view=net-8.0");
             this.videostream.NewFrame += GetNewFrameAtSomeFPS;
 
         }

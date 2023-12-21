@@ -415,13 +415,13 @@ namespace AForge.Video
 		}
 
         // Worker thread
-        private void WorkerThread( )
+        private async void WorkerThread( )
 		{
             // buffer to read stream
             byte[] buffer = new byte[bufSize];
             // JPEG magic number
             byte[] jpegMagic = new byte[] { 0xFF, 0xD8, 0xFF };
-            int jpegMagicLength = 3;
+            int jpegMagicLength = jpegMagic.Length;
 
             ASCIIEncoding encoding = new ASCIIEncoding( );
 
@@ -430,15 +430,10 @@ namespace AForge.Video
 				// reset reload event
 				reloadEvent.Reset( );
 
-                // HTTP web request
-				HttpWebRequest request = null;
-                // web responce
-				WebResponse response = null;
-                // stream for MJPEG downloading
-                
                 HttpClient client = new HttpClient();
                 Stream stream = null;
-                
+                HttpResponseMessage response = await client.GetAsync(source, HttpCompletionOption.ResponseHeadersRead);
+
                 // boundary betweeen images (string and binary versions)
                 byte[] boundary = null;
                 string boudaryStr = null;
@@ -456,17 +451,8 @@ namespace AForge.Video
 
 				try
 				{
-					// create request
-                    request = (HttpWebRequest) WebRequest.Create( source );
-                    
-                    // set timeout value for the request
-                    request.Timeout = requestTimeout;
-                    
-					// get response
-                    response = request.GetResponse( );
-
 					// check content type
-                    string contentType = response.ContentType;
+                    string contentType = response.Content.Headers.ContentType!.ToString();
                     string[] contentTypeArray = contentType.Split( '/' );
 
                     // "application/octet-stream"
@@ -494,9 +480,9 @@ namespace AForge.Video
                         {
                             boudaryStr = contentType.Substring( boundaryIndex + 1 );
                             // remove spaces and double quotes, which may be added by some IP cameras
-                            boudaryStr = boudaryStr.Trim( ' ', '"' );
+                            boudaryStr = boudaryStr.Trim( ' ', '"' ); // Ba4oTvQMY8ew04N8dcnM
 
-                            boundary = encoding.GetBytes( boudaryStr );
+                            boundary = encoding.GetBytes( boudaryStr ); // In HEx is 66 97 52 111 84 118 81 77 89 56 101 119 48 52 78 56 100 99 110 77 
                             boundaryLen = boundary.Length;
                             boundaryIsChecked = false;
                         }
@@ -525,8 +511,8 @@ namespace AForge.Video
 						if ( ( read = stream.Read( buffer, total, readSize ) ) == 0 )
 							throw new ApplicationException( );
 
-						total += read;
-						todo += read;
+						total += read; //Todo o que foi lido ate agora
+						todo += read; //O que tem que ser processado
 
 						// increment received bytes counter
 						bytesReceived += read;
@@ -652,23 +638,11 @@ namespace AForge.Video
                 }
 				finally
 				{
-					// abort request
-					if ( request != null)
-					{
-                        request.Abort( );
-                        request = null;
-					}
 					// close response stream
 					if ( stream != null )
 					{
 						stream.Close( );
 						stream = null;
-					}
-					// close response
-					if ( response != null )
-					{
-                        response.Close( );
-                        response = null;
 					}
 				}
 
