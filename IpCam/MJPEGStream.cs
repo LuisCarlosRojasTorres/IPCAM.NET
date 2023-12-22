@@ -1,12 +1,4 @@
-// AForge Video Library
-// AForge.NET framework
-// http://www.aforgenet.com/framework/
-//
-// Copyright © AForge.NET, 2005-2011
-// contacts@aforgenet.com
-//
-
-namespace AForge.Video
+namespace IpCam
 {
 	using System;
 	using System.Drawing;
@@ -19,8 +11,8 @@ namespace AForge.Video
     /// <summary>
     /// MJPEG video source.
     /// </summary>
-    public class MJPEGStream : IVideoSource
-	{
+    public class MjpegStream : IMjpegStream
+    {
         // URL for MJPEG stream
         private string source;
         // received frames count
@@ -180,7 +172,7 @@ namespace AForge.Video
         /// Initializes a new instance of the <see cref="MJPEGStream"/> class.
         /// </summary>
         /// 
-        public MJPEGStream( ) { }
+        public MjpegStream( ) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MJPEGStream"/> class.
@@ -188,7 +180,7 @@ namespace AForge.Video
         /// 
         /// <param name="source">URL, which provides MJPEG stream.</param>
         /// 
-        public MJPEGStream( string source )
+        public MjpegStream( string source )
         {
             this.source = source;
         }

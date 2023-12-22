@@ -1,12 +1,4 @@
-// AForge Video Library
-// AForge.NET framework
-// http://www.aforgenet.com/framework/
-//
-// Copyright © AForge.NET, 2009-2011
-// contacts@aforgenet.com
-//
-
-namespace AForge.Video
+namespace IpCam
 {
     using System;
 

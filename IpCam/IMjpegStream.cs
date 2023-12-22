@@ -1,12 +1,4 @@
-// AForge Video Library
-// AForge.NET framework
-// http://www.aforgenet.com/framework/
-//
-// Copyright © Andrew Kirillov, 2005-2009
-// andrew.kirillov@aforgenet.com
-//
-
-namespace AForge.Video
+namespace IpCam
 {
     using System;
 
@@ -16,7 +8,7 @@ namespace AForge.Video
     /// 
     /// <remarks>The interface describes common methods for different type of video sources.</remarks>
     /// 
-    public interface IVideoSource
+    public interface IMjpegStream
     {
         /// <summary>
         /// New frame event.
