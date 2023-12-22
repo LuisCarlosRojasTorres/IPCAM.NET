@@ -19,45 +19,10 @@ namespace AForge.Video
     /// <summary>
     /// MJPEG video source.
     /// </summary>
-    /// 
-    /// <remarks><para>The video source downloads JPEG images from the specified URL, which represents
-    /// MJPEG stream.</para>
-    /// 
-    /// <para>Sample usage:</para>
-    /// <code>
-    /// // create MJPEG video source
-    /// MJPEGStream stream = new MJPEGStream( "some url" );
-    /// // set event handlers
-    /// stream.NewFrame += new NewFrameEventHandler( video_NewFrame );
-    /// // start the video source
-    /// stream.Start( );
-    /// // ...
-    /// </code>
-    /// 
-    /// <para><note>Some cameras produce HTTP header, which does not conform strictly to
-    /// standard, what leads to .NET exception. To avoid this exception the <b>useUnsafeHeaderParsing</b>
-    /// configuration option of <b>httpWebRequest</b> should be set, what may be done using application
-    /// configuration file.</note></para>
-    /// <code>
-    /// &lt;configuration&gt;
-    /// 	&lt;system.net&gt;
-    /// 		&lt;settings&gt;
-    /// 			&lt;httpWebRequest useUnsafeHeaderParsing="true" /&gt;
-    /// 		&lt;/settings&gt;
-    /// 	&lt;/system.net&gt;
-    /// &lt;/configuration&gt;
-    /// </code>
-    /// </remarks>
-    /// 
     public class MJPEGStream : IVideoSource
 	{
         // URL for MJPEG stream
         private string source;
-        // login and password for HTTP authentication
-        private string login = null;
-		private string password = null;
-        // proxy information
-        private IWebProxy proxy = null;
         // received frames count
         private int framesReceived;
         // recieved byte count
@@ -75,10 +40,8 @@ namespace AForge.Video
         private const int readSize = 1024;
 
 		private Thread	thread = null;
-		private ManualResetEvent stopEvent = null;
-		private ManualResetEvent reloadEvent = null;
-
-        private string userAgent = "Mozilla/5.0";
+		private ManualResetEvent? stopEvent = null;
+		private ManualResetEvent? reloadEvent = null;
 
         /// <summary>
         /// New frame event.
@@ -140,68 +103,6 @@ namespace AForge.Video
 					reloadEvent.Set( );
 			}
 		}
-
-        /// <summary>
-        /// Login value.
-        /// </summary>
-        /// 
-        /// <remarks>Login required to access video source.</remarks>
-        /// 
-        public string Login
-		{
-			get { return login; }
-			set { login = value; }
-		}
-
-        /// <summary>
-        /// Password value.
-        /// </summary>
-        /// 
-        /// <remarks>Password required to access video source.</remarks>
-        /// 
-        public string Password
-		{
-			get { return password; }
-			set { password = value; }
-		}
-        
-        /// <summary>
-        /// Gets or sets proxy information for the request.
-        /// </summary>
-        /// 
-        /// <remarks><para>The local computer or application config file may specify that a default
-        /// proxy to be used. If the Proxy property is specified, then the proxy settings from the Proxy
-        /// property overridea the local computer or application config file and the instance will use
-        /// the proxy settings specified. If no proxy is specified in a config file
-        /// and the Proxy property is unspecified, the request uses the proxy settings
-        /// inherited from Internet Explorer on the local computer. If there are no proxy settings
-        /// in Internet Explorer, the request is sent directly to the server.
-        /// </para></remarks>
-        /// 
-        public IWebProxy Proxy
-        {
-            get { return proxy; }
-            set { proxy = value; }
-         }
-
-        /// <summary>
-        /// User agent to specify in HTTP request header.
-        /// </summary>
-        /// 
-        /// <remarks><para>Some IP cameras check what is the requesting user agent and depending
-        /// on it they provide video in different formats or do not provide it at all. The property
-        /// sets the value of user agent string, which is sent to camera in request header.
-        /// </para>
-        /// 
-        /// <para>Default value is set to "Mozilla/5.0". If the value is set to <see langword="null"/>,
-        /// the user agent string is not sent in request header.</para>
-        /// </remarks>
-        /// 
-        public string HttpUserAgent
-        {
-            get { return userAgent; }
-            set { userAgent = value; }
-        }
 
         /// <summary>
         /// Received frames count.
@@ -276,24 +177,6 @@ namespace AForge.Video
 		}
 
         /// <summary>
-        /// Force using of basic authentication when connecting to the video source.
-        /// </summary>
-        /// 
-        /// <remarks><para>For some IP cameras (TrendNET IP cameras, for example) using standard .NET's authentication via credentials
-        /// does not seem to be working (seems like camera does not request for authentication, but expects corresponding headers to be
-        /// present on connection request). So this property allows to force basic authentication by adding required HTTP headers when
-        /// request is sent.</para>
-        /// 
-        /// <para>Default value is set to <see langword="false"/>.</para>
-        /// </remarks>
-        /// 
-        public bool ForceBasicAuthentication
-        {
-            get { return forceBasicAuthentication; }
-            set { forceBasicAuthentication = value; }
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="MJPEGStream"/> class.
         /// </summary>
         /// 
@@ -325,8 +208,11 @@ namespace AForge.Video
 			if ( !IsRunning )
 			{
                 // check source
-                if ( ( source == null ) || ( source == string.Empty ) )
-                    throw new ArgumentException( "Video source is not specified." );
+                if ((source == null) || (source == string.Empty))
+                {
+                    throw new ArgumentException("Video source is not specified.");
+                }
+                
                 
                 framesReceived = 0;
 				bytesReceived = 0;
@@ -345,10 +231,6 @@ namespace AForge.Video
         /// <summary>
         /// Signal video source to stop its work.
         /// </summary>
-        /// 
-        /// <remarks>Signals video source to stop its background thread, stop to
-        /// provide new frames and free resources.</remarks>
-        /// 
         public void SignalToStop( )
 		{
 			// stop thread
@@ -408,9 +290,9 @@ namespace AForge.Video
 			thread = null;
 
 			// release events
-			stopEvent.Close( );
+			stopEvent!.Close( );
 			stopEvent = null;
-			reloadEvent.Close( );
+			reloadEvent!.Close( );
 			reloadEvent = null;
 		}
 
@@ -420,8 +302,8 @@ namespace AForge.Video
             // buffer to read stream
             byte[] buffer = new byte[bufSize];
             // JPEG magic number
-            byte[] jpegMagic = new byte[] { 0xFF, 0xD8, 0xFF };
-            int jpegMagicLength = jpegMagic.Length;
+            byte[] jpegHeader = new byte[] { 0xFF, 0xD8, 0xFF };
+            int jpegHeaderLength = jpegHeader.Length;
 
             ASCIIEncoding encoding = new ASCIIEncoding( );
 
@@ -430,9 +312,9 @@ namespace AForge.Video
 				// reset reload event
 				reloadEvent.Reset( );
 
-                HttpClient client = new HttpClient();
-                Stream stream = null;
-                HttpResponseMessage response = await client.GetAsync(source, HttpCompletionOption.ResponseHeadersRead);
+                HttpClient httpClient = new HttpClient();
+                Stream? streamAsync = null;
+                HttpResponseMessage httpClientResponse = await httpClient.GetAsync(source, HttpCompletionOption.ResponseHeadersRead);
 
                 // boundary betweeen images (string and binary versions)
                 byte[] boundary = null;
@@ -452,7 +334,7 @@ namespace AForge.Video
 				try
 				{
 					// check content type
-                    string contentType = response.Content.Headers.ContentType!.ToString();
+                    string contentType = httpClientResponse.Content.Headers.ContentType!.ToString();
                     string[] contentTypeArray = contentType.Split( '/' );
 
                     // "application/octet-stream"
@@ -495,8 +377,8 @@ namespace AForge.Video
 					// get response stream
                     //stream = response.GetResponseStream( );
                     //stream.ReadTimeout = requestTimeout;
-                    var streamAsync = client.GetStreamAsync(source); 
-                    stream = streamAsync.Result;
+                    streamAsync = await httpClient.GetStreamAsync(source); 
+                    
                     
                     // loop
                     while ( ( !stopEvent.WaitOne( 0, false ) ) && ( !reloadEvent.WaitOne( 0, false ) ) )
@@ -508,7 +390,7 @@ namespace AForge.Video
 						}
 
 						// read next portion from stream
-						if ( ( read = stream.Read( buffer, total, readSize ) ) == 0 )
+						if ( ( read = streamAsync.Read( buffer, total, readSize ) ) == 0 )
 							throw new ApplicationException( );
 
 						total += read; //Todo o que foi lido ate agora
@@ -540,26 +422,26 @@ namespace AForge.Video
                                 boudaryStr = (char) ch + boudaryStr;
                             }
 
-                            boundary = encoding.GetBytes( boudaryStr );
+                            boundary = encoding.GetBytes( boudaryStr! );
                             boundaryLen = boundary.Length;
                             boundaryIsChecked = true;
                         }
 				
 						// search for image start
-						if ( ( align == 1 ) && ( todo >= jpegMagicLength ) )
+						if ( ( align == 1 ) && ( todo >= jpegHeaderLength) )
 						{
-							start = ByteArrayUtils.Find( buffer, jpegMagic, pos, todo );
+							start = ByteArrayUtils.Find( buffer, jpegHeader, pos, todo );
 							if ( start != -1 )
 							{
 								// found JPEG start
-								pos		= start + jpegMagicLength;
+								pos		= start + jpegHeaderLength;
 								todo	= total - pos;
 								align	= 2;
 							}
 							else
 							{
 								// delimiter not found
-                                todo    = jpegMagicLength - 1;
+                                todo    = jpegHeaderLength - 1;
 								pos		= total - todo;
 							}
 						}
@@ -568,7 +450,7 @@ namespace AForge.Video
 						while ( ( align == 2 ) && ( todo != 0 ) && ( todo >= boundaryLen ) )
 						{
 							stop = ByteArrayUtils.Find( buffer,
-                                ( boundaryLen != 0 ) ? boundary : jpegMagic,
+                                ( boundaryLen != 0 ) ? boundary : jpegHeader,
                                 pos, todo );
 
 							if ( stop != -1 )
@@ -582,7 +464,7 @@ namespace AForge.Video
 								// image at stop
 								if ( ( NewFrame != null ) && ( !stopEvent.WaitOne( 0, false ) ) )
 								{
-									Bitmap bitmap = (Bitmap) Bitmap.FromStream ( new MemoryStream( buffer, start, stop - start ) );
+									Bitmap? bitmap = (Bitmap) Bitmap.FromStream ( new MemoryStream( buffer, start, stop - start ) );
 									// notify client
                                     NewFrame( this, new NewFrameEventArgs( bitmap ) );
 									// release the image
@@ -638,12 +520,27 @@ namespace AForge.Video
                 }
 				finally
 				{
-					// close response stream
-					if ( stream != null )
+                    // close response stream
+                    if (httpClient != null)
+                    {
+                        httpClient.Dispose();
+                        httpClient = null;
+                    }
+
+                    // close response stream
+                    if (httpClientResponse != null)
+                    {
+                        httpClientResponse.Dispose();
+                        httpClientResponse = null;
+                    }
+
+                    // close response stream
+                    if ( streamAsync != null )
 					{
-						stream.Close( );
-						stream = null;
+						streamAsync.Close( );
+						streamAsync = null;
 					}
+
 				}
 
 				// need to stop ?
