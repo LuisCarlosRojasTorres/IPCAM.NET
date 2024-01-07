@@ -49,7 +49,7 @@ namespace IpCam
         /// Depending on video source it may be a file name, URL or any other string
         /// describing the video source.</remarks>
         /// 
-        string Source { get; }
+        string IpCamUrl { get; }
 
         /// <summary>
         /// Received frames count.

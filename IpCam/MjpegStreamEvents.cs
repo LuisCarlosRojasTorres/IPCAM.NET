@@ -75,7 +75,7 @@ namespace IpCam
         {
             this.frame = frame;
         }
-
+                
         /// <summary>
         /// New frame from video source.
         /// </summary>
@@ -104,7 +104,7 @@ namespace IpCam
         {
             this.description = description;
         }
-
+        
         /// <summary>
         /// Video source error description.
         /// </summary>
@@ -112,6 +112,6 @@ namespace IpCam
         public string Description
         {
             get { return description; }
-        }
+        }        
     }
 }

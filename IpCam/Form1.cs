@@ -17,7 +17,7 @@ namespace IpCam
             this.videostream = new MjpegStream("http://192.168.15.100:8080/video");
             this.videostream.NewFrame += GetNewFrameAtSomeFPS;
             videostream.Start();
-        }
+         }
 
         private void GetNewFrameAtSomeFPS(object sender, NewFrameEventArgs e)
         {
@@ -26,7 +26,8 @@ namespace IpCam
             ImageConverter converter = new ImageConverter();
             byte[] bmpAsArrayOfBytes = (byte[])converter.ConvertTo((Bitmap)bmp!, typeof(byte[]))!;
 
-            
+            pictureBox1.Image = bmp;
+
         }
 
         private void button1_Click(object sender, EventArgs e)

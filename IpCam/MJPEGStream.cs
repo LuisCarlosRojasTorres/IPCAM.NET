@@ -14,7 +14,7 @@ namespace IpCam
     public class MjpegStream : IMjpegStream
     {
         // URL for MJPEG stream
-        private string source;
+        private string ipCamUrl;
         // received frames count
         private int framesReceived;
         // recieved byte count
@@ -27,13 +27,17 @@ namespace IpCam
         private bool forceBasicAuthentication = false;
 
         // buffer size used to download MJPEG stream
-        private const int bufSize = 1024 * 1024;
+        private const int bufferLength = 1024 * 1024;
         // size of portion to read at once
         private const int readSize = 1024;
 
 		private Thread	thread = null;
 		private ManualResetEvent? stopEvent = null;
 		private ManualResetEvent? reloadEvent = null;
+
+        private Task? task = null;
+        private ManualResetEventSlim? stopEventSlim = null;
+        private ManualResetEventSlim? reloadEventSlim = null;
 
         /// <summary>
         /// New frame event.
@@ -84,12 +88,12 @@ namespace IpCam
         /// 
         /// <remarks>URL, which provides MJPEG stream.</remarks>
         /// 
-        public string Source
-		{
-			get { return source; }
+        public string IpCamUrl
+        {
+			get { return ipCamUrl; }
 			set
 			{
-				source = value;
+                ipCamUrl = value;
 				// signal to reload
 				if ( thread != null )
 					reloadEvent.Set( );
@@ -182,7 +186,7 @@ namespace IpCam
         /// 
         public MjpegStream( string source )
         {
-            this.source = source;
+            this.ipCamUrl = source;
         }
 
         /// <summary>
@@ -200,7 +204,7 @@ namespace IpCam
 			if ( !IsRunning )
 			{
                 // check source
-                if ((source == null) || (source == string.Empty))
+                if ((ipCamUrl == null) || (ipCamUrl == string.Empty))
                 {
                     throw new ArgumentException("Video source is not specified.");
                 }
@@ -213,10 +217,16 @@ namespace IpCam
 				stopEvent	= new ManualResetEvent( false );
 				reloadEvent	= new ManualResetEvent( false );
 
-				// create and start new thread
-				thread = new Thread( new ThreadStart( WorkerThread ) );
-				thread.Name = source;
-				thread.Start( );
+                stopEventSlim = new ManualResetEventSlim( false );
+                reloadEventSlim = new ManualResetEventSlim(false);
+
+                // create and start new thread
+                //thread = new Thread( new ThreadStart( WorkerThread ) );
+				//thread.Name = ipCamUrl;                
+				//thread.Start( );
+
+                task = new Task(() => WorkerThread());
+                task.Start( );                
 			}
 		}
 
@@ -292,7 +302,7 @@ namespace IpCam
         private async void WorkerThread( )
 		{
             // buffer to read stream
-            byte[] buffer = new byte[bufSize];
+            byte[] buffer = new byte[bufferLength];
             // JPEG magic number
             byte[] jpegHeader = new byte[] { 0xFF, 0xD8, 0xFF };
             int jpegHeaderLength = jpegHeader.Length;
@@ -306,7 +316,7 @@ namespace IpCam
 
                 HttpClient httpClient = new HttpClient();
                 Stream? streamAsync = null;
-                HttpResponseMessage httpClientResponse = await httpClient.GetAsync(source, HttpCompletionOption.ResponseHeadersRead);
+                HttpResponseMessage httpClientResponse = await httpClient.GetAsync(ipCamUrl, HttpCompletionOption.ResponseHeadersRead);
 
                 // boundary betweeen images (string and binary versions)
                 byte[] boundary = null;
@@ -369,14 +379,14 @@ namespace IpCam
 					// get response stream
                     //stream = response.GetResponseStream( );
                     //stream.ReadTimeout = requestTimeout;
-                    streamAsync = await httpClient.GetStreamAsync(source); 
+                    streamAsync = await httpClient.GetStreamAsync(ipCamUrl); 
                     
                     
                     // loop
                     while ( ( !stopEvent.WaitOne( 0, false ) ) && ( !reloadEvent.WaitOne( 0, false ) ) )
 					{
 						// check total read
-						if ( total > bufSize - readSize )
+						if ( total > bufferLength - readSize )
 						{
 							total = pos = todo = 0;
 						}
