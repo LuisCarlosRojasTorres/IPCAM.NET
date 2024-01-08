@@ -26,7 +26,7 @@ namespace IpCam
             ImageConverter converter = new ImageConverter();
             byte[] bmpAsArrayOfBytes = (byte[])converter.ConvertTo((Bitmap)bmp!, typeof(byte[]))!;
 
-            pictureBox1.Image = bmp;
+            //pictureBox1.Image = bmp;
 
         }
 
@@ -34,12 +34,5 @@ namespace IpCam
         {
             videostream.Start();
         }
-
-        private void button2_Click(object sender, EventArgs e)
-        {
-            videostream.Stop();
-        }
-
-
     }
 }

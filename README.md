@@ -1,3 +1,17 @@
+IPCAM - Thread to TASKs
+Changelog:
+
+List of Changes:
+- Change Thread to Task
+	- Initialize
+
+TODOs:
+- Change to ManualResetEventSlim
+- Change Thread to Task
+	- Delete all references
+- Change arguments of events to Frame to byteArrays
+- dELETE EXTRA VARS
+
 # IPCAM.NET
 A lite version of AForge for IP Cameras in NETCore6
 

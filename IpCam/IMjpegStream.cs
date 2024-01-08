@@ -59,17 +59,7 @@ namespace IpCam
         /// access to the property.
         /// </remarks>
         /// 
-        int FramesReceived { get; }
-
-        /// <summary>
-        /// Received bytes count.
-        /// </summary>
-        /// 
-        /// <remarks>Number of bytes the video source provided from the moment of the last
-        /// access to the property.
-        /// </remarks>
-        /// 
-        long BytesReceived { get; }
+        int FramesReceived { get; }        
 
         /// <summary>
         /// State of the video source.
@@ -87,32 +77,7 @@ namespace IpCam
         /// object creates background thread and notifies about new frames with the
         /// help of <see cref="NewFrame"/> event.</remarks>
         /// 
-        void Start( );
-
-        /// <summary>
-        /// Signal video source to stop its work.
-        /// </summary>
-        /// 
-        /// <remarks>Signals video source to stop its background thread, stop to
-        /// provide new frames and free resources.</remarks>
-        /// 
-        void SignalToStop( );
-
-        /// <summary>
-        /// Wait for video source has stopped.
-        /// </summary>
-        /// 
-        /// <remarks>Waits for video source stopping after it was signalled to stop using
-        /// <see cref="SignalToStop"/> method.</remarks>
-        /// 
-        void WaitForStop( );
-
-        /// <summary>
-        /// Stop video source.
-        /// </summary>
-        /// 
-        /// <remarks>Stops video source aborting its thread.</remarks>
-        /// 
-        void Stop( );
+        void Start( );        
+        
     }
 }

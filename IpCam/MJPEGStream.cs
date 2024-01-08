@@ -14,11 +14,10 @@ namespace IpCam
     public class MjpegStream : IMjpegStream
     {
         // URL for MJPEG stream
-        private string ipCamUrl;
+        private string ipCamUrl = null;
         // received frames count
-        private int framesReceived;
-        // recieved byte count
-        private long bytesReceived;
+        private int framesReceived = 0;
+        
         // use separate HTTP connection group or use default
         private bool useSeparateConnectionGroup = true;
         // timeout value for web request
@@ -27,7 +26,7 @@ namespace IpCam
         private bool forceBasicAuthentication = false;
 
         // buffer size used to download MJPEG stream
-        private const int bufferLength = 1024 * 1024;
+        private const int bufferLength = 1024 * 256;
         // size of portion to read at once
         private const int readSize = 1024;
 
@@ -38,7 +37,7 @@ namespace IpCam
         private Task? task = null;
         private ManualResetEventSlim? stopEventSlim = null;
         private ManualResetEventSlim? reloadEventSlim = null;
-
+        
         /// <summary>
         /// New frame event.
         /// </summary>
@@ -116,25 +115,7 @@ namespace IpCam
 				framesReceived = 0;
 				return frames;
 			}
-		}
-
-        /// <summary>
-        /// Received bytes count.
-        /// </summary>
-        /// 
-        /// <remarks>Number of bytes the video source provided from the moment of the last
-        /// access to the property.
-        /// </remarks>
-        /// 
-        public long BytesReceived
-		{
-			get
-			{
-				long bytes = bytesReceived;
-				bytesReceived = 0;
-				return bytes;
-			}
-		}
+		}        
 
         /// <summary>
         /// Request timeout value.
@@ -158,17 +139,11 @@ namespace IpCam
         public bool IsRunning
 		{
 			get
-			{
-				if ( thread != null )
-				{
-                    // check thread status
-					if ( thread.Join( 0 ) == false )
-						return true;
-
-					// the thread is not running, so free resources
-					Free( );
-				}
-				return false;
+			{   if (task != null)
+                {
+                    return (task.Status == TaskStatus.Running);
+                }
+                else { return false; }                
 			}
 		}
 
@@ -206,12 +181,11 @@ namespace IpCam
                 // check source
                 if ((ipCamUrl == null) || (ipCamUrl == string.Empty))
                 {
-                    throw new ArgumentException("Video source is not specified.");
+                    throw new ArgumentException("Video source url is not specified.");
                 }
                 
                 
-                framesReceived = 0;
-				bytesReceived = 0;
+                framesReceived = 0;				
 
 				// create events
 				stopEvent	= new ManualResetEvent( false );
@@ -219,84 +193,16 @@ namespace IpCam
 
                 stopEventSlim = new ManualResetEventSlim( false );
                 reloadEventSlim = new ManualResetEventSlim(false);
-
+                
                 // create and start new thread
-                //thread = new Thread( new ThreadStart( WorkerThread ) );
-				//thread.Name = ipCamUrl;                
-				//thread.Start( );
+                thread = new Thread( new ThreadStart( WorkerThread ) );
+				thread.Name = ipCamUrl;                
+				thread.Start( );
 
-                task = new Task(() => WorkerThread());
-                task.Start( );                
+                //task = new Task(() => WorkerThread());
+                //task.Start( );                
 			}
-		}
-
-        /// <summary>
-        /// Signal video source to stop its work.
-        /// </summary>
-        public void SignalToStop( )
-		{
-			// stop thread
-			if ( thread != null )
-			{
-				// signal to stop
-				stopEvent.Set( );
-			}
-		}
-
-        /// <summary>
-        /// Wait for video source has stopped.
-        /// </summary>
-        /// 
-        /// <remarks>Waits for source stopping after it was signalled to stop using
-        /// <see cref="SignalToStop"/> method.</remarks>
-        /// 
-        public void WaitForStop( )
-		{
-			if ( thread != null )
-			{
-				// wait for thread stop
-				thread.Join( );
-
-				Free( );
-			}
-		}
-
-        /// <summary>
-        /// Stop video source.
-        /// </summary>
-        /// 
-        /// <remarks><para>Stops video source aborting its thread.</para>
-        /// 
-        /// <para><note>Since the method aborts background thread, its usage is highly not preferred
-        /// and should be done only if there are no other options. The correct way of stopping camera
-        /// is <see cref="SignalToStop">signaling it stop</see> and then
-        /// <see cref="WaitForStop">waiting</see> for background thread's completion.</note></para>
-        /// </remarks>
-        /// 
-        public void Stop( )
-		{
-			if ( this.IsRunning )
-			{
-                stopEvent.Set( );
-                thread.Abort();
-				WaitForStop( );
-			}
-		}
-
-        /// <summary>
-        /// Free resource.
-        /// </summary>
-        /// 
-        private void Free( )
-		{
-			thread = null;
-
-			// release events
-			stopEvent!.Close( );
-			stopEvent = null;
-			reloadEvent!.Close( );
-			reloadEvent = null;
-		}
+		}                        
 
         // Worker thread
         private async void WorkerThread( )
@@ -309,10 +215,10 @@ namespace IpCam
 
             ASCIIEncoding encoding = new ASCIIEncoding( );
 
-            while ( !stopEvent.WaitOne( 0, false ) )
+            while ( !stopEvent!.WaitOne( 0, false ) )
 			{
 				// reset reload event
-				reloadEvent.Reset( );
+				reloadEvent!.Reset( );
 
                 HttpClient httpClient = new HttpClient();
                 Stream? streamAsync = null;
@@ -398,10 +304,7 @@ namespace IpCam
 						total += read; //Todo o que foi lido ate agora
 						todo += read; //O que tem que ser processado
 
-						// increment received bytes counter
-						bytesReceived += read;
-
-                        // do we need to check boundary ?
+						// do we need to check boundary ?
                         if ( ( boundaryLen != 0 ) && ( !boundaryIsChecked ) )
                         {
                             // some IP cameras, like AirLink, claim that boundary is "myboundary",
@@ -467,11 +370,13 @@ namespace IpCam
 								if ( ( NewFrame != null ) && ( !stopEvent.WaitOne( 0, false ) ) )
 								{
 									Bitmap? bitmap = (Bitmap) Bitmap.FromStream ( new MemoryStream( buffer, start, stop - start ) );
-									// notify client
-                                    NewFrame( this, new NewFrameEventArgs( bitmap ) );
+                                    
+                                    // notify the subscribrer using event
+                                    NewFrame( this, new NewFrameEventArgs(bitmap) );
 									// release the image
                                     bitmap.Dispose( );
                                     bitmap = null;
+
 								}
 
 								// shift array
@@ -545,9 +450,12 @@ namespace IpCam
 
 				}
 
-				// need to stop ?
-				if ( stopEvent.WaitOne( 0, false ) )
-					break;
+                // need to stop ?
+                if (stopEvent.WaitOne(0, false))
+                {
+                    break;
+                }
+					
 			}
 
             if ( PlayingFinished != null )
