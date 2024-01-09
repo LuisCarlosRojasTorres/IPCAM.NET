@@ -2,60 +2,9 @@ namespace IpCam
 {
     using System;
 
-    /// <summary>
-    /// Delegate for new frame event handler.
-    /// </summary>
-    /// 
-    /// <param name="sender">Sender object.</param>
-    /// <param name="eventArgs">Event arguments.</param>
-    /// 
     public delegate void NewFrameEventHandler( object sender, NewFrameEventArgs eventArgs );
-
-    /// <summary>
-    /// Delegate for video source error event handler.
-    /// </summary>
-    /// 
-    /// <param name="sender">Sender object.</param>
-    /// <param name="eventArgs">Event arguments.</param>
-    /// 
-    public delegate void VideoSourceErrorEventHandler( object sender, VideoSourceErrorEventArgs eventArgs );
-
-    /// <summary>
-    /// Delegate for playing finished event handler.
-    /// </summary>
-    /// 
-    /// <param name="sender">Sender object.</param>
-    /// <param name="reason">Reason of finishing video playing.</param>
-    /// 
-    public delegate void PlayingFinishedEventHandler( object sender, ReasonToFinishPlaying reason );
-
-    /// <summary>
-    /// Reason of finishing video playing.
-    /// </summary>
-    /// 
-    /// <remarks><para>When video source class fire the <see cref="IVideoSource.PlayingFinished"/> event, they
-    /// need to specify reason of finishing video playing. For example, it may be end of stream reached.</para></remarks>
-    /// 
-    public enum ReasonToFinishPlaying
-    {
-        /// <summary>
-        /// Video playing has finished because it end was reached.
-        /// </summary>
-        EndOfStreamReached,
-        /// <summary>
-        /// Video playing has finished because it was stopped by user.
-        /// </summary>
-        StoppedByUser,
-        /// <summary>
-        /// Video playing has finished because the device was lost (unplugged).
-        /// </summary>
-        DeviceLost,
-        /// <summary>
-        /// Video playing has finished because of some error happened the video source (camera, stream, file, etc.).
-        /// A error reporting event usually is fired to provide error information.
-        /// </summary>
-        VideoSourceError
-    }
+    public delegate void NewByteArrayEventHandler(object sender, NewByteArrayEventArgs eventArgs);
+    public delegate void VideoSourceErrorEventHandler( object sender, VideoSourceErrorEventArgs eventArgs );    
 
     /// <summary>
     /// Arguments for new frame event from video source.
@@ -83,6 +32,35 @@ namespace IpCam
         public System.Drawing.Bitmap Frame
         {
             get { return frame; }
+        }
+    }
+
+    /// <summary>
+    /// Arguments for new frame event from video source.
+    /// </summary>
+    /// 
+    public class NewByteArrayEventArgs : EventArgs
+    {
+        private byte[] byteArrayFrame;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NewFrameEventArgs"/> class.
+        /// </summary>
+        /// 
+        /// <param name="frame">New frame.</param>
+        /// 
+        public NewByteArrayEventArgs(byte[] byteArrayFrame)
+        {
+            this.byteArrayFrame = byteArrayFrame;
+        }
+
+        /// <summary>
+        /// New frame from video source.
+        /// </summary>
+        /// 
+        public byte[] ByteArrayFrame
+        {
+            get { return this.byteArrayFrame; }
         }
     }
 

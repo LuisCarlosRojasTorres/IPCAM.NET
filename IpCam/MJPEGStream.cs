@@ -14,91 +14,22 @@ namespace IpCam
     public class MjpegStream : IMjpegStream
     {
         // URL for MJPEG stream
-        private string ipCamUrl = null;
+        private string IpCamUrl { get;}
         // received frames count
         private int framesReceived = 0;
         
-        // use separate HTTP connection group or use default
-        private bool useSeparateConnectionGroup = true;
-        // timeout value for web request
-        private int requestTimeout = 10000;
-        // if we should use basic authentication when connecting to the video source
-        private bool forceBasicAuthentication = false;
-
         // buffer size used to download MJPEG stream
-        private const int bufferLength = 1024 * 256;
+        private const int bufferLength = 1024 * 1024;
         // size of portion to read at once
         private const int readSize = 1024;
 
-		private Thread	thread = null;
-		private ManualResetEvent? stopEvent = null;
-		private ManualResetEvent? reloadEvent = null;
-
-        private Task? task = null;
-        private ManualResetEventSlim? stopEventSlim = null;
-        private ManualResetEventSlim? reloadEventSlim = null;
+		private Task? task = null;
         
-        /// <summary>
-        /// New frame event.
-        /// </summary>
-        /// 
-        /// <remarks><para>Notifies clients about new available frame from video source.</para>
-        /// 
-        /// <para><note>Since video source may have multiple clients, each client is responsible for
-        /// making a copy (cloning) of the passed video frame, because the video source disposes its
-        /// own original copy after notifying of clients.</note></para>
-        /// </remarks>
-        /// 
         public event NewFrameEventHandler NewFrame;
-
-        /// <summary>
-        /// Video source error event.
-        /// </summary>
-        /// 
-        /// <remarks>This event is used to notify clients about any type of errors occurred in
-        /// video source object, for example internal exceptions.</remarks>
-        /// 
         public event VideoSourceErrorEventHandler VideoSourceError;
+        public event NewByteArrayEventHandler NewByteArray;        
 
-        /// <summary>
-        /// Video playing finished event.
-        /// </summary>
-        /// 
-        /// <remarks><para>This event is used to notify clients that the video playing has finished.</para>
-        /// </remarks>
-        /// 
-        public event PlayingFinishedEventHandler PlayingFinished;
-
-        /// <summary>
-        /// Use or not separate connection group.
-        /// </summary>
-        /// 
-        /// <remarks>The property indicates to open web request in separate connection group.</remarks>
-        /// 
-        public bool SeparateConnectionGroup
-		{
-			get { return useSeparateConnectionGroup; }
-			set { useSeparateConnectionGroup = value; }
-		}
-
-        /// <summary>
-        /// Video source.
-        /// </summary>
-        /// 
-        /// <remarks>URL, which provides MJPEG stream.</remarks>
-        /// 
-        public string IpCamUrl
-        {
-			get { return ipCamUrl; }
-			set
-			{
-                ipCamUrl = value;
-				// signal to reload
-				if ( thread != null )
-					reloadEvent.Set( );
-			}
-		}
-
+        private CancellationTokenSource cts;
         /// <summary>
         /// Received frames count.
         /// </summary>
@@ -115,43 +46,7 @@ namespace IpCam
 				framesReceived = 0;
 				return frames;
 			}
-		}        
-
-        /// <summary>
-        /// Request timeout value.
-        /// </summary>
-        /// 
-        /// <remarks>The property sets timeout value in milliseconds for web requests.
-        /// Default value is 10000 milliseconds.</remarks>
-        /// 
-        public int RequestTimeout
-        {
-            get { return requestTimeout; }
-            set { requestTimeout = value; }
-        }
-
-        /// <summary>
-        /// State of the video source.
-        /// </summary>
-        /// 
-        /// <remarks>Current state of video source object - running or not.</remarks>
-        /// 
-        public bool IsRunning
-		{
-			get
-			{   if (task != null)
-                {
-                    return (task.Status == TaskStatus.Running);
-                }
-                else { return false; }                
-			}
 		}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MJPEGStream"/> class.
-        /// </summary>
-        /// 
-        public MjpegStream( ) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MJPEGStream"/> class.
@@ -161,7 +56,8 @@ namespace IpCam
         /// 
         public MjpegStream( string source )
         {
-            this.ipCamUrl = source;
+            this.IpCamUrl = source;
+            this.cts = new CancellationTokenSource();
         }
 
         /// <summary>
@@ -175,37 +71,16 @@ namespace IpCam
         /// <exception cref="ArgumentException">Video source is not specified.</exception>
         /// 
         public void Start( )
-		{
-			if ( !IsRunning )
-			{
-                // check source
-                if ((ipCamUrl == null) || (ipCamUrl == string.Empty))
-                {
-                    throw new ArgumentException("Video source url is not specified.");
-                }
-                
-                
-                framesReceived = 0;				
+		{			    
+            framesReceived = 0;				
 
-				// create events
-				stopEvent	= new ManualResetEvent( false );
-				reloadEvent	= new ManualResetEvent( false );
-
-                stopEventSlim = new ManualResetEventSlim( false );
-                reloadEventSlim = new ManualResetEventSlim(false);
-                
-                // create and start new thread
-                thread = new Thread( new ThreadStart( WorkerThread ) );
-				thread.Name = ipCamUrl;                
-				thread.Start( );
-
-                //task = new Task(() => WorkerThread());
-                //task.Start( );                
-			}
+			task = new Task(() => WorkerThread(this.cts.Token));
+            task.Start( );                
+			
 		}                        
 
         // Worker thread
-        private async void WorkerThread( )
+        private async void WorkerThread(CancellationToken token)
 		{
             // buffer to read stream
             byte[] buffer = new byte[bufferLength];
@@ -215,14 +90,11 @@ namespace IpCam
 
             ASCIIEncoding encoding = new ASCIIEncoding( );
 
-            while ( !stopEvent!.WaitOne( 0, false ) )
+            while (!token.IsCancellationRequested)
 			{
-				// reset reload event
-				reloadEvent!.Reset( );
-
-                HttpClient httpClient = new HttpClient();
+				HttpClient httpClient = new HttpClient();
                 Stream? streamAsync = null;
-                HttpResponseMessage httpClientResponse = await httpClient.GetAsync(ipCamUrl, HttpCompletionOption.ResponseHeadersRead);
+                HttpResponseMessage httpClientResponse = await httpClient.GetAsync(this.IpCamUrl, HttpCompletionOption.ResponseHeadersRead);
 
                 // boundary betweeen images (string and binary versions)
                 byte[] boundary = null;
@@ -285,12 +157,12 @@ namespace IpCam
 					// get response stream
                     //stream = response.GetResponseStream( );
                     //stream.ReadTimeout = requestTimeout;
-                    streamAsync = await httpClient.GetStreamAsync(ipCamUrl); 
-                    
-                    
+                    streamAsync = await httpClient.GetStreamAsync(this.IpCamUrl);
+
+
                     // loop
-                    while ( ( !stopEvent.WaitOne( 0, false ) ) && ( !reloadEvent.WaitOne( 0, false ) ) )
-					{
+                    while (!token.IsCancellationRequested)
+                    {
 						// check total read
 						if ( total > bufferLength - readSize )
 						{
@@ -367,7 +239,7 @@ namespace IpCam
 								framesReceived ++;
 
 								// image at stop
-								if ( ( NewFrame != null ) && ( !stopEvent.WaitOne( 0, false ) ) )
+								if ( ( NewFrame != null ) && !token.IsCancellationRequested )
 								{
 									Bitmap? bitmap = (Bitmap) Bitmap.FromStream ( new MemoryStream( buffer, start, stop - start ) );
                                     
@@ -377,7 +249,11 @@ namespace IpCam
                                     bitmap.Dispose( );
                                     bitmap = null;
 
-								}
+                                    byte[]? frameAsByteArray = new byte[stop - start];
+                                    Array.Copy(buffer, start, frameAsByteArray, 0, stop - start);
+
+                                    NewByteArray(this, new NewByteArrayEventArgs(frameAsByteArray));
+                                }
 
 								// shift array
 								pos		= stop + boundaryLen;
@@ -430,38 +306,34 @@ namespace IpCam
                     // close response stream
                     if (httpClient != null)
                     {
-                        httpClient.Dispose();
-                        httpClient = null;
+                        httpClient.Dispose();                        
                     }
 
                     // close response stream
                     if (httpClientResponse != null)
                     {
-                        httpClientResponse.Dispose();
-                        httpClientResponse = null;
+                        httpClientResponse.Dispose();                        
                     }
 
                     // close response stream
                     if ( streamAsync != null )
 					{
 						streamAsync.Close( );
-						streamAsync = null;
 					}
-
 				}
 
                 // need to stop ?
-                if (stopEvent.WaitOne(0, false))
+                if (token.IsCancellationRequested)
                 {
                     break;
                 }
 					
-			}
-
-            if ( PlayingFinished != null )
-            {
-                PlayingFinished( this, ReasonToFinishPlaying.StoppedByUser );
-            }
+			}                       
 		}
-	}
+
+        public void Stop()
+        {
+            this.cts.Cancel();
+        }
+    }
 }
