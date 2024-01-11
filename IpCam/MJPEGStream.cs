@@ -60,6 +60,7 @@ namespace IpCam
         //  2 = searching for image end
         string contentType;
         string[] contentTypeArray;
+        byte[]? frameAsByteArray;
 
 
         /// <summary>
@@ -121,6 +122,7 @@ namespace IpCam
             this.jpegHeader = new byte[] { 0xFF, 0xD8, 0xFF };
             this.jpegHeaderLength = jpegHeader.Length;
             this.encoding = new ASCIIEncoding();
+            this.frameAsByteArray = null;
         }
        
         private async void TreatFsmCameraAsync(CancellationToken cancellationToken)
@@ -141,14 +143,13 @@ namespace IpCam
                     case MjpegStreamState.ErrorWorking:
                         this.HandleErrorWorking();
                         break;
-                    case MjpegStreamState.Pause:                        
+                    case MjpegStreamState.Pause:
+                        await Task.Delay(1000);
                         break;
-                }
-
-                await Task.Delay(1000);
+                }                
             }
 
-            this.DisposeHttpClients();
+            //this.DisposeHttpClients();
         }
 
         private void DisposeHttpClients() 
@@ -346,10 +347,10 @@ namespace IpCam
                             //bitmap.Dispose();
                             //bitmap = null;
 
-                            byte[]? frameAsByteArray = new byte[this.stop - this.start];
-                            Array.Copy(this.buffer, this.start, frameAsByteArray, 0, this.stop - this.start);
+                            this.frameAsByteArray = new byte[this.stop - this.start];
+                            Array.Copy(this.buffer, this.start, this.frameAsByteArray, 0, this.stop - this.start);
 
-                            NewByteArray!(this, new NewByteArrayEventArgs(frameAsByteArray));
+                            NewByteArray!(this, new NewByteArrayEventArgs(this.frameAsByteArray));
                         }
 
                         // shift array

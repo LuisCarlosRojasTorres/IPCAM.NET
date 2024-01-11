@@ -9,7 +9,7 @@ namespace IpCam
     {
         MjpegStream videostream;
         Bitmap bmp;
-        Bitmap bmp2;
+        
 
         public Form1()
         {
@@ -34,6 +34,11 @@ namespace IpCam
         private void GetNewByteArray(object sender, NewByteArrayEventArgs e)
         {
             byte[] newFrame = e.ByteArrayFrame;
+            //bmp = (Bitmap)Bitmap.FromStream(new MemoryStream(newFrame));
+            //pictureBox1.Image = bmp;
+            
+            
+
         }
 
         private void button1_Click(object sender, EventArgs e)
