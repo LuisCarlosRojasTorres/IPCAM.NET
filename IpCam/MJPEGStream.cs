@@ -386,7 +386,7 @@ namespace IpCam
             try
             {
                 // Code here
-                this.state = MjpegStreamState.Working;
+                
                 Console.WriteLine(" - Working: status Working");
             }
             catch
@@ -411,8 +411,16 @@ namespace IpCam
 
         public void Unpause()
         {
-            this.state = MjpegStreamState.Connecting;
-            Console.WriteLine(" - Unpause: status changed to Connecting");
+            if (this.state != MjpegStreamState.Pause)
+            {
+                this.state = MjpegStreamState.Pause;
+                Console.WriteLine(" - Unpause: status changed to Pause");
+            }
+            else 
+            {
+                this.state = MjpegStreamState.Connecting;
+                Console.WriteLine(" - Unpause: status changed to Connecting");
+            }            
         }
     }
 }
