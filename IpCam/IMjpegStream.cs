@@ -16,7 +16,7 @@ namespace IpCam
 
         int FramesReceived { get; }        
         void Start( );
-        void Stop();
+        void Unpause();
 
     }
 }

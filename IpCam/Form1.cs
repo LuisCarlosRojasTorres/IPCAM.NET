@@ -18,7 +18,7 @@ namespace IpCam
             this.videostream.NewFrame += GetNewFrame;
             this.videostream.NewByteArray += GetNewByteArray;
             videostream.Start();
-         }
+        }
 
         private void GetNewFrame(object sender, NewFrameEventArgs e)
         {
@@ -33,12 +33,17 @@ namespace IpCam
 
         private void GetNewByteArray(object sender, NewByteArrayEventArgs e)
         {
-            byte[] newFrame = e.ByteArrayFrame;            
+            byte[] newFrame = e.ByteArrayFrame;
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             videostream.Start();
+        }
+
+        private void button_OFF_Click(object sender, EventArgs e)
+        {
+            videostream.Unpause();
         }
     }
 }

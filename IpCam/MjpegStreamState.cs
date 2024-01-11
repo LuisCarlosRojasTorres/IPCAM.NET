@@ -10,6 +10,10 @@
     /// 
     public enum MjpegStreamState
     {
-        
+        Connecting = 0,
+        ErrorConnecting = 10,
+        Working = 1,
+        ErrorWorking = 11,
+        Pause = 12,
     }
 }

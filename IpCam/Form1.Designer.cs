@@ -65,7 +65,8 @@
             button_OFF.Size = new Size(75, 23);
             button_OFF.TabIndex = 2;
             button_OFF.Text = "OFF";
-            button_OFF.UseVisualStyleBackColor = true;            
+            button_OFF.UseVisualStyleBackColor = true;
+            button_OFF.Click += button_OFF_Click;
             // 
             // panel1
             // 
