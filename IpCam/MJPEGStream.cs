@@ -327,11 +327,7 @@ namespace IpCam
                     // do nothing for Application Exception, which we raised on our own
                     // wait for a while before the next try
                     Thread.Sleep(250);
-                }
-                catch (ThreadAbortException)
-                {
-                    break;
-                }
+                }                
                 catch (Exception exception)
                 {
                     // provide information to clients
@@ -339,8 +335,6 @@ namespace IpCam
                     {
                         VideoSourceError(this, new VideoSourceErrorEventArgs(exception.Message));
                     }
-                    // wait for a while before the next try
-                    Thread.Sleep(250);
                 }
                 finally
                 {
@@ -390,11 +384,34 @@ namespace IpCam
                     case MjpegStreamState.ErrorWorking:
                         this.HandleErrorWorking();
                         break;
-                    case MjpegStreamState.Pause:
-                        await Task.Delay(1000);
+                    case MjpegStreamState.Pause:                        
                         break;
                 }
-            }        
+
+                await Task.Delay(1000);
+            }
+
+            this.DisposeHttpClients();
+        }
+
+        private void DisposeHttpClients() 
+        {
+            if (httpClient != null)
+            {
+                httpClient.Dispose();
+            }
+
+            // close response stream
+            if (httpClientResponse != null)
+            {
+                httpClientResponse.Dispose();
+            }
+
+            // close response stream
+            if (streamAsync != null)
+            {
+                streamAsync.Close();
+            }
         }
 
         private async Task ConnectToIpCamera()
@@ -564,7 +581,7 @@ namespace IpCam
                         this.framesReceived++;
 
                         // image at stop
-                        if (NewFrame != null)
+                        if (NewByteArray != null)
                         {
                             //Bitmap? bitmap = (Bitmap)Bitmap.FromStream(new MemoryStream(this.buffer, this.start, this.stop - this.start));
 
