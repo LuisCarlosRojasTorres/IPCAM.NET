@@ -2,14 +2,14 @@ using System.Text;
 using System.Windows.Forms;
 using IpCam;
 
-
 namespace IpCam
 {
     public partial class Form1 : Form
     {
         MjpegStream videostream;
         Bitmap bmp;
-        
+        QRDecoder QRCodeDecoder;
+        QRCodeResult[]? QRCodeResultArray;
 
         public Form1()
         {
@@ -18,27 +18,26 @@ namespace IpCam
             this.videostream.NewFrame += GetNewFrame;
             this.videostream.NewByteArray += GetNewByteArray;
             videostream.Start();
+
+            QRCodeDecoder = new QRDecoder();
+            QRCodeResultArray = null;
         }
 
         private void GetNewFrame(object sender, NewFrameEventArgs e)
         {
-            Bitmap bmp = (Bitmap)e.Frame.Clone();
+            bmp = (Bitmap)e.Frame.Clone();
 
-            ImageConverter converter = new ImageConverter();
-            byte[] bmpAsArrayOfBytes = (byte[])converter.ConvertTo((Bitmap)bmp!, typeof(byte[]))!;
-
-            pictureBox1.Image = bmp;
+            //pictureBox1.Image = bmp;
+            if(bmp != null ) 
+            {
+                QRCodeResultArray = QRCodeDecoder.ImageDecoder(bmp);
+            }           
 
         }
 
         private void GetNewByteArray(object sender, NewByteArrayEventArgs e)
         {
             byte[] newFrame = e.ByteArrayFrame;
-            //bmp = (Bitmap)Bitmap.FromStream(new MemoryStream(newFrame));
-            //pictureBox1.Image = bmp;
-            
-            
-
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -48,7 +47,8 @@ namespace IpCam
 
         private void button_OFF_Click(object sender, EventArgs e)
         {
-            videostream.Unpause();
+            QRCodeResultArray = QRCodeDecoder.ImageDecoder(bmp);
+            //videostream.Unpause();
         }
     }
 }

@@ -337,15 +337,15 @@ namespace IpCam
                         this.framesReceived++;
 
                         // image at stop
-                        if (NewByteArray != null)
+                        if (NewByteArray != null && (NewFrame != null))
                         {
-                            //Bitmap? bitmap = (Bitmap)Bitmap.FromStream(new MemoryStream(this.buffer, this.start, this.stop - this.start));
+                            Bitmap? bitmap = (Bitmap)Bitmap.FromStream(new MemoryStream(this.buffer, this.start, this.stop - this.start));
 
                             // notify the subscribrer using event
-                            //NewFrame(this, new NewFrameEventArgs(bitmap));
+                            NewFrame(this, new NewFrameEventArgs(bitmap));
                             // release the image
-                            //bitmap.Dispose();
-                            //bitmap = null;
+                            bitmap.Dispose();
+                            bitmap = null;
 
                             this.frameAsByteArray = new byte[this.stop - this.start];
                             Array.Copy(this.buffer, this.start, this.frameAsByteArray, 0, this.stop - this.start);
